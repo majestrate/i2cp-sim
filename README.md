@@ -16,4 +16,4 @@ i2p network simulator
 
 ## running
 
-   ./i2psim
+    ./i2psim
