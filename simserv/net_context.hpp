@@ -7,13 +7,6 @@ namespace i2p
 {
 namespace simulation
 {
-
-	class NetContext
-	{
-
-	};
-
-	typedef std::shared_ptr<NetContext> NetContext_ptr;
 }
 }
 

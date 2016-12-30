@@ -68,7 +68,7 @@ namespace client
 
 			void SetEncryptionPrivateKey (const uint8_t * key);
 			void LeaseSetCreated (const uint8_t * buf, size_t len); // called from I2CPSession
-    virtual void SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce); // called from I2CPSession
+    virtual void SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce, uint64_t delay = 0); // called from I2CPSession
 
 			// implements LocalDestination
 			const uint8_t * GetEncryptionPrivateKey () const { return m_EncryptionPrivateKey; };
@@ -181,7 +181,7 @@ namespace client
 		public:
 
 			I2CPServer (const std::string& interface, int port);
-			~I2CPServer ();
+			virtual ~I2CPServer ();
 			
 			void Start ();
 			void Stop ();
@@ -189,6 +189,8 @@ namespace client
 
 			bool InsertSession (std::shared_ptr<I2CPSession> session);
 			void RemoveSession (uint16_t sessionID);
+
+    virtual bool ShouldDrop(DropEvent & ev) {return false;}
 
 		private:
 

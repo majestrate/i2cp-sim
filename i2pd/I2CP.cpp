@@ -57,8 +57,9 @@ namespace client
 		SetLeaseSet (ls);
 	}
 	
-	void I2CPDestination::SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce)
+	void I2CPDestination::SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce, uint64_t delay)
 	{
+		(void) delay;
 		auto msg = NewI2NPMessage ();
 		uint8_t * buf = msg->GetPayload ();
 		htobe32buf (buf, len);
@@ -473,13 +474,14 @@ namespace client
 						if (m_IsSendAccepted) 
 						  SendMessageStatusMessage (nonce, eI2CPMessageStatusAccepted); // accepted
 						DropEvent ev = {300, payloadLen};
-						if(m_ShouldDrop && m_ShouldDrop(ev)) {
+						if(m_Owner.ShouldDrop(ev)) {
 							m_DropReplyTimer.expires_from_now(boost::posix_time::milliseconds(ev.Delay + 1));
 							m_DropReplyTimer.async_wait([&] (const boost::system::error_code & ec){
 									if(!ec) SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedFailure);
-							});
+								});
 						} else {
-							m_Destination->SendMsgTo (buf + offset, payloadLen, identity.GetIdentHash (), nonce);
+							// delayed delivery
+							m_Destination->SendMsgTo (buf + offset, payloadLen, identity.GetIdentHash (), nonce, ev.Delay);
 						}
 					}
       				else
@@ -513,7 +515,7 @@ namespace client
 				break;
 				case 1: // address
 				{
-					LogPrint (eLogError, "I2CP: address ", name, " not found");
+					LogPrint (eLogError, "I2CP: name addresses not supported");
 					SendHostReplyMessage (requestID, nullptr);
 					return;
 				}

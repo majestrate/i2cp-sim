@@ -11,9 +11,12 @@ LIBS = -lcrypto -lssl -lz -lboost_system -lboost_date_time -lboost_filesystem -l
 CXXFLAGS = -I. -Wall -std=c++11
 CXX = clang++
 
-BIN=simserv
+BIN=simserver
 
 all: $(BIN)
 
 $(BIN): $(OBJ)
 	$(CXX) -o $(BIN) $(OBJ) $(LIBS)
+
+clean:
+	rm -f $(OBJ) $(BIN)
