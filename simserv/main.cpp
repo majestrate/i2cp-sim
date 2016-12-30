@@ -56,6 +56,7 @@ int main(int argc, char * argv[])
 
 	auto & log = i2p::log::Logger();
 	log.Start();
+	log.SetLogLevel("debug");
 
 	if(argc == 4)
 	{

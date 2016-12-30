@@ -59,6 +59,20 @@ namespace client
 	const char I2CP_PARAM_DONT_PUBLISH_LEASESET[] = "i2cp.dontPublishLeaseSet";	
 	const char I2CP_PARAM_MESSAGE_RELIABILITY[] = "i2cp.messageReliability";	
 
+
+  typedef std::function<void(const uint8_t *, size_t)> I2CPDeliveryFunc;
+
+  struct I2CPDelayedDelivery
+  {
+    I2CPDelayedDelivery(boost::asio::io_service & serv, const uint8_t * data, size_t len, uint64_t delay, I2CPDeliveryFunc f);
+    ~I2CPDelayedDelivery();
+
+
+    boost::asio::deadline_timer Timer;
+    uint8_t * _buf;
+    size_t _sz;
+  };
+
 	class I2CPSession;
 	class I2CPDestination: public LeaseSetDestination
 	{
@@ -75,6 +89,8 @@ namespace client
 			std::shared_ptr<const i2p::data::IdentityEx> GetIdentity () const { return m_Identity; };
 
 		protected:
+
+    void QueueRecvDataMessage(const uint8_t * msg, size_t len, uint64_t delay);
 
 			// I2CP
 			void HandleDataMessage (const uint8_t * buf, size_t len);
@@ -101,8 +117,6 @@ namespace client
     // how big the message was
     size_t Size;
   };
-  /** @brief function that determines if we should drop an i2np message */
-  typedef std::function<bool(DropEvent &)> DropFunction;
 
 	class I2CPServer;
 	class I2CPSession: public std::enable_shared_from_this<I2CPSession>
@@ -122,7 +136,7 @@ namespace client
 			void Start ();
 			void Stop ();
 			uint16_t GetSessionID () const { return m_SessionID; };
-			std::shared_ptr<const I2CPDestination> GetDestination () const { return m_Destination; };
+			std::shared_ptr<I2CPDestination> GetDestination () const { return m_Destination; };
 
 			// called from I2CPDestination	
 			void SendI2CPMessage (uint8_t type, const uint8_t * payload, size_t len);
@@ -140,6 +154,8 @@ namespace client
 			void HostLookupMessageHandler (const uint8_t * buf, size_t len);
 			void DestLookupMessageHandler (const uint8_t * buf, size_t len);
 			void GetBandwidthLimitsMessageHandler (const uint8_t * buf, size_t len);
+
+    I2CPServer & GetServer() const { return m_Owner; }
 
 		private:
 			
@@ -170,8 +186,6 @@ namespace client
 			uint16_t m_SessionID;
 			uint32_t m_MessageID;
 			bool m_IsSendAccepted;
-      DropFunction m_ShouldDrop;
-    boost::asio::deadline_timer m_DropReplyTimer;
 	};
 
 	typedef void (I2CPSession::*I2CPMessageHandler)(const uint8_t * buf, size_t len);
@@ -190,6 +204,8 @@ namespace client
 			bool InsertSession (std::shared_ptr<I2CPSession> session);
 			void RemoveSession (uint16_t sessionID);
 
+    std::shared_ptr<I2CPSession> FindSession(const i2p::data::IdentHash & ident) const;
+
     virtual bool ShouldDrop(DropEvent & ev) {return false;}
 
 		private:
@@ -201,7 +217,8 @@ namespace client
 			void HandleAccept(const boost::system::error_code& ecode, std::shared_ptr<I2CPSession::proto::socket> socket);
 
 		private:
-			
+
+    mutable std::mutex m_SessionsMutex;
 			I2CPMessageHandler m_MessagesHandlers[256];
 			std::map<uint16_t, std::shared_ptr<I2CPSession> > m_Sessions;
 

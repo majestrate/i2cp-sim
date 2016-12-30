@@ -22,6 +22,26 @@ namespace i2p
 namespace client
 {
 
+	I2CPDelayedDelivery::I2CPDelayedDelivery(boost::asio::io_service & service, const uint8_t * data, size_t sz, uint64_t delay, I2CPDeliveryFunc f) :
+		Timer(service),
+		_sz(sz)
+	{
+		_buf = new uint8_t[sz];
+		memcpy(_buf, data, sz);
+		const I2CPDelayedDelivery * self = this;
+		Timer.expires_from_now(boost::posix_time::milliseconds(delay));
+		Timer.async_wait([&] (const boost::system::error_code & ec) {
+				if(!ec) f(_buf, _sz);
+				delete self;
+		});
+	}
+
+	I2CPDelayedDelivery::~I2CPDelayedDelivery()
+	{
+		delete [] _buf;
+	}
+
+
 	I2CPDestination::I2CPDestination (std::shared_ptr<I2CPSession> owner, std::shared_ptr<const i2p::data::IdentityEx> identity, bool isPublic, const std::map<std::string, std::string>& params): 
 		LeaseSetDestination (isPublic, &params), m_Owner (owner), m_Identity (identity) 
 	{
@@ -56,10 +76,17 @@ namespace client
 		ls->SetExpirationTime (m_LeaseSetExpirationTime);
 		SetLeaseSet (ls);
 	}
-	
+
+
+	void I2CPDestination::QueueRecvDataMessage(const uint8_t * data, size_t len, uint64_t delay)
+	{
+		I2CPDeliveryFunc func = std::bind(&I2CPDestination::HandleDataMessage, this, std::placeholders::_1, std::placeholders::_2);
+		new I2CPDelayedDelivery(GetService(), data, len, delay, func);
+	}
+
 	void I2CPDestination::SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce, uint64_t delay)
 	{
-		(void) delay;
+
 		auto msg = NewI2NPMessage ();
 		uint8_t * buf = msg->GetPayload ();
 		htobe32buf (buf, len);
@@ -67,6 +94,17 @@ namespace client
 		msg->len += len + 4; 
 		msg->FillI2NPMessageHeader (eI2NPData);
 		auto s = GetSharedFromThis ();
+
+		auto loopback = m_Owner->GetServer().FindSession(ident);
+		if (loopback)
+		{
+			LogPrint(eLogDebug, "I2CP found loopback session");
+			loopback->GetDestination()->QueueRecvDataMessage(buf, len, delay);
+			m_Owner->SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedSuccess);
+			return;
+		}
+
+
 		auto remote = FindLeaseSet (ident);
 		if (remote)
 		{
@@ -151,9 +189,7 @@ namespace client
 
 	I2CPSession::I2CPSession (I2CPServer& owner, std::shared_ptr<proto::socket> socket):
 		m_Owner (owner), m_Socket (socket), m_Payload (nullptr),
-		m_SessionID (0xFFFF), m_MessageID (0), m_IsSendAccepted (true),
-		m_ShouldDrop(nullptr),
-		m_DropReplyTimer(owner.GetService())
+		m_SessionID (0xFFFF), m_MessageID (0), m_IsSendAccepted (true)
 	{
 	}
 		
@@ -473,14 +509,11 @@ namespace client
 						uint32_t nonce = bufbe32toh (buf + offset + payloadLen);
 						if (m_IsSendAccepted) 
 						  SendMessageStatusMessage (nonce, eI2CPMessageStatusAccepted); // accepted
-						DropEvent ev = {300, payloadLen};
+						DropEvent ev = {0, payloadLen};
 						if(m_Owner.ShouldDrop(ev)) {
-							m_DropReplyTimer.expires_from_now(boost::posix_time::milliseconds(ev.Delay + 1));
-							m_DropReplyTimer.async_wait([&] (const boost::system::error_code & ec){
-									if(!ec) SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedFailure);
-								});
+							SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedFailure);
 						} else {
-							// delayed delivery
+							// delivery
 							m_Destination->SendMsgTo (buf + offset, payloadLen, identity.GetIdentHash (), nonce, ev.Delay);
 						}
 					}
@@ -732,19 +765,36 @@ namespace client
 	bool I2CPServer::InsertSession (std::shared_ptr<I2CPSession> session)
 	{
 		if (!session) return false;
-		if (!m_Sessions.insert({session->GetSessionID (), session}).second)
-		{	
-			LogPrint (eLogError, "I2CP: duplicate session id ", session->GetSessionID ());
-			return false;
-		}	
+		{
+			std::unique_lock<std::mutex> lock(m_SessionsMutex);
+			if (!m_Sessions.insert({session->GetSessionID (), session}).second)
+				{	
+					LogPrint (eLogError, "I2CP: duplicate session id ", session->GetSessionID ());
+					return false;
+				}
+		}
 		return true;
 	}
 
 
 	void I2CPServer::RemoveSession (uint16_t sessionID)
 	{
+		std::unique_lock<std::mutex> lock(m_SessionsMutex);
 		m_Sessions.erase (sessionID);
-	}	
+	}
+
+	std::shared_ptr<I2CPSession> I2CPServer::FindSession(const i2p::data::IdentHash & ident) const
+	{
+		{
+			std::unique_lock<std::mutex> lock(m_SessionsMutex);
+			for (const auto & item : m_Sessions)
+			{
+				if (item.second->GetDestination()->GetIdentity()->GetIdentHash() == ident)
+					return item.second;
+			}
+		}
+		return nullptr;
+	}
 }
 }
 
