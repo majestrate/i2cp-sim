@@ -56,7 +56,6 @@ namespace client
 
 			void ReloadConfig ();
 
-    std::shared_ptr<LoopbackDestination> GetLoopbackDestination() const { return m_LoopbackDestination; }
 			std::shared_ptr<ClientDestination> GetSharedLocalDestination () const { return m_SharedLocalDestination; };
 			std::shared_ptr<ClientDestination> CreateNewLocalDestination (bool isPublic = false, i2p::data::SigningKeyType sigType = i2p::data::SIGNING_KEY_TYPE_DSA_SHA1,
 			    const std::map<std::string, std::string> * params = nullptr); // transient
@@ -89,7 +88,6 @@ namespace client
 			std::mutex m_DestinationsMutex;
 			std::map<i2p::data::IdentHash, std::shared_ptr<ClientDestination> > m_Destinations;
 			std::shared_ptr<ClientDestination>  m_SharedLocalDestination;
-    std::shared_ptr<LoopbackDestination> m_LoopbackDestination;
 
 			AddressBook m_AddressBook;
 
