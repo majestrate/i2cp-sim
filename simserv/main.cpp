@@ -77,9 +77,11 @@ int main(int argc, char * argv[])
 		DroppyI2CPServer server(addr, port, settings);
 
 		signal(SIGINT, handle_sig);
+		signal(SIGTERM, handle_sig);
 
 
 		server.Start();
+		LogPrint(eLogInfo, "i2cp server started");
 		{
 			std::unique_lock<std::mutex> lock(done_mtx);
 			done.wait(lock);
