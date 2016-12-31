@@ -32,13 +32,7 @@ namespace client
 		auto s = shared_from_this();
 		s->Timer.async_wait([s, f] (const boost::system::error_code & ec) {
 				f(s->_buf, s->_sz);
-				s->Terminate();
 		});
-	}
-
-	void I2CPDelayedDelivery::Terminate()
-	{
-		delete this;
 	}
 
 	I2CPDelayedDelivery::~I2CPDelayedDelivery()
