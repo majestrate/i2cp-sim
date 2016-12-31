@@ -267,8 +267,8 @@ namespace config {
   }
 
   bool IsDefault(const char *name) {
-    if (!m_Options.count(name))
-      throw "try to check non-existent option";
+    if (!m_Options.count(name)) // throw "try to check non-existent option";
+      return true;
 
     if (m_Options[name].defaulted())
       return true;
