@@ -79,10 +79,11 @@ namespace client
 	}
 
 
-	void I2CPDestination::QueueRecvDataMessage(const uint8_t * data, size_t len, uint64_t delay)
+	std::shared_ptr<I2CPDelayedDelivery> I2CPDestination::QueueRecvDataMessage(const uint8_t * data, size_t len, uint64_t delay)
 	{
 		I2CPDeliveryFunc func = std::bind(&I2CPDestination::HandleDataMessage, this, std::placeholders::_1, std::placeholders::_2);
-		std::make_shared<I2CPDelayedDelivery>(GetService(), data, len, delay, func);
+		auto d = std::make_shared<I2CPDelayedDelivery>(GetService(), data, len, delay, func);
+		return d;
 	}
 
 	void I2CPDestination::SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce, uint64_t delay)
@@ -100,7 +101,7 @@ namespace client
 		if (loopback)
 		{
 			LogPrint(eLogDebug, "I2CP found loopback session will delay ", delay);
-			loopback->GetDestination()->QueueRecvDataMessage(payload, len, delay);
+			auto d = loopback->GetDestination()->QueueRecvDataMessage(payload, len, delay);
 			m_Owner->SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedSuccess);
 			return;
 		}

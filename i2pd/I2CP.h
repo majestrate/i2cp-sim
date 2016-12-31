@@ -94,7 +94,7 @@ namespace client
 
 		protected:
 
-    void QueueRecvDataMessage(const uint8_t * msg, size_t len, uint64_t delay);
+    std::shared_ptr<I2CPDelayedDelivery> QueueRecvDataMessage(const uint8_t * msg, size_t len, uint64_t delay);
 
 			// I2CP
 			void HandleDataMessage (const uint8_t * buf, size_t len);
