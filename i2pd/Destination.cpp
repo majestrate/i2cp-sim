@@ -93,6 +93,7 @@ namespace client
 
 	void LeaseSetDestination::Run ()
 	{
+		LogPrint(eLogDebug, "Destination: running");
 		while (m_IsRunning)
 		{
 			try

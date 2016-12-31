@@ -35,19 +35,22 @@ namespace client
 
 	void I2CPDelayedDelivery::Handle(const boost::system::error_code & ec)
 	{
+		LogPrint(eLogDebug, "I2CP: delayed handled event");
 		func(_buf, _sz);
 	}
 
 	std::shared_ptr<I2CPDelayedDelivery> I2CPDelayedDelivery::Start()
 	{
 		auto self = shared_from_this();
-		Timer.expires_from_now(boost::posix_time::milliseconds(_delay));
-		Timer.async_wait(std::bind(&I2CPDelayedDelivery::Handle, self, std::placeholders::_1));
+		boost::posix_time::milliseconds dlt(_delay);
+		self->Timer.expires_from_now(dlt);
+		self->Timer.async_wait(std::bind(&I2CPDelayedDelivery::Handle, self, std::placeholders::_1));
 		return self;
 	}
 
 	I2CPDelayedDelivery::~I2CPDelayedDelivery()
 	{
+		LogPrint(eLogDebug, "I2CP: delayed delivery done");
 		delete [] _buf;
 	}
 
@@ -112,8 +115,9 @@ namespace client
 		if (loopback)
 		{
 			LogPrint(eLogDebug, "I2CP found loopback session will delay ", delay);
-			auto d = loopback->GetDestination()->QueueRecvDataMessage(payload, len, delay);
+			auto d = loopback->GetDestination()->QueueRecvDataMessage(buf, 4 + len, delay);
 			m_Owner->SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedSuccess);
+			d->Start();
 			return;
 		}
 
@@ -154,6 +158,8 @@ namespace client
 		}
 		return false;
 	}
+
+	void I2CPDestination::StartTunnelPool() {}
 
 	bool I2CPDestination::SendMsg (std::shared_ptr<I2NPMessage> msg, std::shared_ptr<const i2p::data::LeaseSet> remote)
 	{	

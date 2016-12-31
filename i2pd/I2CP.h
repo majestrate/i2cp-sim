@@ -98,6 +98,9 @@ namespace client
 
 		protected:
 
+    void StartTunnelPool();
+
+
     std::shared_ptr<I2CPDelayedDelivery> QueueRecvDataMessage(const uint8_t * msg, size_t len, uint64_t delay);
 
 			// I2CP
