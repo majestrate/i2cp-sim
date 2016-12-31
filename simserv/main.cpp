@@ -95,7 +95,7 @@ int main(int argc, char * argv[])
 		server.Stop();
 	}
 	else
-		LogPrint(eLogError, "usage ", argv[0], " addr port drop_prob");
+		LogPrint(eLogError, "usage ", argv[0], " addr port drop_prob latency");
 	log.Stop();
 	return 0;
 }
