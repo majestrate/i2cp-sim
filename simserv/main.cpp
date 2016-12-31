@@ -59,7 +59,7 @@ int main(int argc, char * argv[])
 	log.Start();
 	log.SetLogLevel("debug");
 
-	if(argc == 5)
+	if(argc == 6)
 	{
 
 		std::string addr = argv[1];
@@ -77,6 +77,7 @@ int main(int argc, char * argv[])
 		};
 
 		settings.Latency = std::atoi(argv[4]);
+		settings.Jitter = std::atoi(argv[5]);
 
 		i2p::context.Init();
 
