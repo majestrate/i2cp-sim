@@ -9,7 +9,6 @@ LIBS = -lcrypto -lssl -lz -lboost_system -lboost_date_time -lboost_filesystem -l
 
 
 CXXFLAGS = -I. -Wall -std=c++11 -g
-CXX = clang++
 
 BIN=i2psim
 
