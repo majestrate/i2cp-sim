@@ -8,7 +8,7 @@ OBJ += $(SIMSERV_SRC:.cpp=.o)
 LIBS = -lcrypto -lssl -lz -lboost_system -lboost_date_time -lboost_filesystem -lboost_program_options -lpthread
 
 
-CXXFLAGS = -I. -Wall -std=c++11
+CXXFLAGS = -I. -Wall -std=c++11 -g
 CXX = clang++
 
 BIN=i2psim

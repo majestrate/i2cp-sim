@@ -431,6 +431,8 @@ namespace client
 			LogPrint (eLogDebug, "Destination: Publishing LeaseSet is pending");
 			return;
 		}
+		return;
+		/*
 		auto outbound = m_Pool->GetNextOutboundTunnel ();
 		if (!outbound)
 		{
@@ -457,7 +459,8 @@ namespace client
 		m_PublishConfirmationTimer.expires_from_now (boost::posix_time::seconds(PUBLISH_CONFIRMATION_TIMEOUT));
 		m_PublishConfirmationTimer.async_wait (std::bind (&LeaseSetDestination::HandlePublishConfirmationTimer,
 			shared_from_this (), std::placeholders::_1));	
-		outbound->SendTunnelDataMsg (floodfill->GetIdentHash (), 0, msg);	
+		outbound->SendTunnelDataMsg (floodfill->GetIdentHash (), 0, msg);
+		*/
 	}
 
 	void LeaseSetDestination::HandlePublishConfirmationTimer (const boost::system::error_code& ecode)

@@ -28,12 +28,17 @@ namespace client
 	{
 		_buf = new uint8_t[sz];
 		memcpy(_buf, data, sz);
-		const I2CPDelayedDelivery * self = this;
 		Timer.expires_from_now(boost::posix_time::milliseconds(delay));
-		Timer.async_wait([&] (const boost::system::error_code & ec) {
-				if(!ec) f(_buf, _sz);
-				delete self;
+		auto s = shared_from_this();
+		s->Timer.async_wait([s, f] (const boost::system::error_code & ec) {
+				f(s->_buf, s->_sz);
+				s->Terminate();
 		});
+	}
+
+	void I2CPDelayedDelivery::Terminate()
+	{
+		delete this;
 	}
 
 	I2CPDelayedDelivery::~I2CPDelayedDelivery()
@@ -47,6 +52,7 @@ namespace client
 	{
 	}
 
+
 	void I2CPDestination::SetEncryptionPrivateKey (const uint8_t * key)
 	{
 		memcpy (m_EncryptionPrivateKey, key, 256);
@@ -54,6 +60,7 @@ namespace client
 
 	void I2CPDestination::HandleDataMessage (const uint8_t * buf, size_t len)
 	{
+		LogPrint(eLogDebug, "I2CP got data message of size ", len);
 		uint32_t length = bufbe32toh (buf);
 		if (length > len - 4) length = len - 4;
 		m_Owner->SendMessagePayloadMessage (buf + 4, length);
@@ -81,7 +88,7 @@ namespace client
 	void I2CPDestination::QueueRecvDataMessage(const uint8_t * data, size_t len, uint64_t delay)
 	{
 		I2CPDeliveryFunc func = std::bind(&I2CPDestination::HandleDataMessage, this, std::placeholders::_1, std::placeholders::_2);
-		new I2CPDelayedDelivery(GetService(), data, len, delay, func);
+		std::make_shared<I2CPDelayedDelivery>(GetService(), data, len, delay, func);
 	}
 
 	void I2CPDestination::SendMsgTo (const uint8_t * payload, size_t len, const i2p::data::IdentHash& ident, uint32_t nonce, uint64_t delay)
@@ -98,8 +105,8 @@ namespace client
 		auto loopback = m_Owner->GetServer().FindSession(ident);
 		if (loopback)
 		{
-			LogPrint(eLogDebug, "I2CP found loopback session");
-			loopback->GetDestination()->QueueRecvDataMessage(buf, len, delay);
+			LogPrint(eLogDebug, "I2CP found loopback session will delay ", delay);
+			loopback->GetDestination()->QueueRecvDataMessage(payload, len, delay);
 			m_Owner->SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedSuccess);
 			return;
 		}
@@ -129,6 +136,17 @@ namespace client
 						s->m_Owner->SendMessageStatusMessage (nonce, eI2CPMessageStatusNoLeaseSet);
 				});
 		}
+	}
+
+	bool I2CPDestination::Start()
+	{
+		if(LeaseSetDestination::Start())
+		{
+			auto tunnel = std::make_shared<i2p::tunnel::ZeroHopsInboundTunnel>();
+			CreateNewLeaseSet({tunnel});
+			return true;
+		}
+		return false;
 	}
 
 	bool I2CPDestination::SendMsg (std::shared_ptr<I2NPMessage> msg, std::shared_ptr<const i2p::data::LeaseSet> remote)
@@ -301,8 +319,9 @@ namespace client
 	{
 		auto socket = m_Socket;
 		if (socket)
-		{	
-			auto l = len + I2CP_HEADER_SIZE;
+		{
+			LogPrint(eLogDebug, "I2CP: send message ", (int)type," of size ", len);
+				auto l = len + I2CP_HEADER_SIZE;
 			uint8_t * buf = new uint8_t[l];
 			htobe32buf (buf + I2CP_HEADER_LENGTH_OFFSET, len);
 			buf[I2CP_HEADER_TYPE_OFFSET] = type;
@@ -509,7 +528,7 @@ namespace client
 						uint32_t nonce = bufbe32toh (buf + offset + payloadLen);
 						if (m_IsSendAccepted) 
 						  SendMessageStatusMessage (nonce, eI2CPMessageStatusAccepted); // accepted
-						DropEvent ev = {0, payloadLen};
+						DropEvent ev = {1000, payloadLen};
 						if(m_Owner.ShouldDrop(ev)) {
 							SendMessageStatusMessage(nonce, eI2CPMessageStatusGuaranteedFailure);
 						} else {
@@ -548,7 +567,19 @@ namespace client
 				break;
 				case 1: // address
 				{
-					LogPrint (eLogError, "I2CP: name addresses not supported");
+					auto name = ExtractString(buf + 11, len - 11);
+					auto pos = name.find(".b32.i2p");
+					if (pos != std::string::npos)
+					{
+						Base32ToByteStream(name.c_str(), pos, ident, 32);
+						auto session = m_Owner.FindSession(ident);
+						if (session)
+						{
+							SendHostReplyMessage(requestID, session->GetDestination()->GetIdentity());
+							return;
+						}
+					}
+					LogPrint (eLogError, "I2CP: name not found");
 					SendHostReplyMessage (requestID, nullptr);
 					return;
 				}

@@ -1,5 +1,6 @@
 #include <i2pd/I2CP.h>
 #include <i2pd/Log.h>
+#include <i2pd/RouterContext.h>
 #include <random>
 #include <mutex>
 #include <condition_variable>
@@ -10,8 +11,8 @@ std::mutex done_mtx;
 struct DropSettings
 {
 	std::function<bool(void)> Drop;
-	uint64_t Latency;
-	uint64_t Jitter;
+	uint64_t Latency = 500;
+	uint64_t Jitter = 40;
 };
 
 class DroppyI2CPServer : public i2p::client::I2CPServer
@@ -74,6 +75,8 @@ int main(int argc, char * argv[])
 		settings.Drop = [&] () -> bool {
 			return dist(gen);
 		};
+
+		i2p::context.Init();
 
 		DroppyI2CPServer server(addr, port, settings);
 

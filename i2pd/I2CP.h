@@ -62,11 +62,12 @@ namespace client
 
   typedef std::function<void(const uint8_t *, size_t)> I2CPDeliveryFunc;
 
-  struct I2CPDelayedDelivery
+  struct I2CPDelayedDelivery : public std::enable_shared_from_this<I2CPDelayedDelivery>
   {
     I2CPDelayedDelivery(boost::asio::io_service & serv, const uint8_t * data, size_t len, uint64_t delay, I2CPDeliveryFunc f);
     ~I2CPDelayedDelivery();
 
+    void Terminate();
 
     boost::asio::deadline_timer Timer;
     uint8_t * _buf;
@@ -87,6 +88,9 @@ namespace client
 			// implements LocalDestination
 			const uint8_t * GetEncryptionPrivateKey () const { return m_EncryptionPrivateKey; };
 			std::shared_ptr<const i2p::data::IdentityEx> GetIdentity () const { return m_Identity; };
+
+
+    bool Start();
 
 		protected:
 

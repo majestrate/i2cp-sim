@@ -19,7 +19,7 @@
 
 namespace i2p {
 namespace fs {
-  std::string appName = "i2pd";
+  std::string appName = "i2psim";
   std::string dataDir = "";
 #ifdef _WIN32
   std::string dirSep = "\\";
