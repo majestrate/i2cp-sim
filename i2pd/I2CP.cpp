@@ -23,16 +23,27 @@ namespace client
 {
 
 	I2CPDelayedDelivery::I2CPDelayedDelivery(boost::asio::io_service & service, const uint8_t * data, size_t sz, uint64_t delay, I2CPDeliveryFunc f) :
+		func(f),
 		Timer(service),
-		_sz(sz)
+		_sz(sz),
+		_delay(delay)
 	{
 		_buf = new uint8_t[sz];
 		memcpy(_buf, data, sz);
-		Timer.expires_from_now(boost::posix_time::milliseconds(delay));
-		auto s = shared_from_this();
-		s->Timer.async_wait([s, f] (const boost::system::error_code & ec) {
-				f(s->_buf, s->_sz);
-		});
+
+	}
+
+	void I2CPDelayedDelivery::Handle(const boost::system::error_code & ec)
+	{
+		func(_buf, _sz);
+	}
+
+	std::shared_ptr<I2CPDelayedDelivery> I2CPDelayedDelivery::Start()
+	{
+		auto self = shared_from_this();
+		Timer.expires_from_now(boost::posix_time::milliseconds(_delay));
+		Timer.async_wait(std::bind(&I2CPDelayedDelivery::Handle, self, std::placeholders::_1));
+		return self;
 	}
 
 	I2CPDelayedDelivery::~I2CPDelayedDelivery()

@@ -67,11 +67,15 @@ namespace client
     I2CPDelayedDelivery(boost::asio::io_service & serv, const uint8_t * data, size_t len, uint64_t delay, I2CPDeliveryFunc f);
     ~I2CPDelayedDelivery();
 
-    void Terminate();
+    std::shared_ptr<I2CPDelayedDelivery> Start();
 
+    void Handle(const boost::system::error_code & ec);
+
+    I2CPDeliveryFunc func;
     boost::asio::deadline_timer Timer;
     uint8_t * _buf;
     size_t _sz;
+    uint64_t _delay;
   };
 
 	class I2CPSession;
