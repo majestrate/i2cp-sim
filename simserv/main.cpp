@@ -55,13 +55,10 @@ void handle_sig(int signal)
 int main(int argc, char * argv[])
 {
 
-	auto & log = i2p::log::Logger();
-	log.Start();
-	log.SetLogLevel("debug");
-
 	if(argc == 6)
 	{
-
+		auto & log = i2p::log::Logger();
+		log.Start();
 		std::string addr = argv[1];
 		int port = std::atoi(argv[2]);
 		double drop = std::atof(argv[3]);
@@ -94,9 +91,9 @@ int main(int argc, char * argv[])
 			done.wait(lock);
 		}
 		server.Stop();
+		log.Stop();
 	}
 	else
-		LogPrint(eLogError, "usage ", argv[0], " addr port drop_prob latency jitter");
-	log.Stop();
+		std::cout << "usage: " << argv[0] << " addr port drop_prob latency jitter" << std::endl;
 	return 0;
 }
