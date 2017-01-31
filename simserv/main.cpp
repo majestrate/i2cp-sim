@@ -45,8 +45,6 @@ private:
 
 };
 
-DroppyI2CPServer * server = nullptr;
-
 void handle_sig(int signal)
 {
 	done.notify_all();
