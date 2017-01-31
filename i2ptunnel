@@ -8,15 +8,4 @@ for j in $I2P/lib/*.jar ; do
 	jars="$j:$jars"
 done
 
-cmdfile="$PWD/i2ptunnel-commands.txt"
-
-if [ "$1" != "" ] ; then
-    cmdfile="$1"
-fi
-
-if [ ! -e $cmdfile ] ; then
-    echo "$cmdfile does not exist"
-    exit 1
-fi
-
-java -cp "$jars" net.i2p.i2ptunnel.I2PTunnel -cli "$cmdfile"
+java -cp "$jars" net.i2p.i2ptunnel.I2PTunnel -cli $1

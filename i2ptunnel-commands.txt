@@ -1,5 +1,4 @@
 config 127.0.1.1 7654
-genkeys server.dat server-public.dat
-genkeys client.dat
+genkeys server.dat serverpublic.dat
 server 127.0.0.1 80 server.dat
-client 1800 file:server-public.dat
+client 1800
