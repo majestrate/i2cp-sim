@@ -1,0 +1,22 @@
+#!/bin/bash
+if [[ "$I2P" == "" ]] ; then
+	echo '$I2P not set to java i2p root directory'
+	exit 1
+fi
+jars=""
+for j in $I2P/lib/*.jar ; do
+	jars="$j:$jars"
+done
+
+cmdfile="$PWD/i2ptunnel-commands.txt"
+
+if [ "$1" != "" ] ; then
+    cmdfile="$1"
+fi
+
+if [ ! -e $cmdfile ] ; then
+    echo "$cmdfile does not exist"
+    exit 1
+fi
+
+java -cp "$jars" net.i2p.i2ptunnel.I2PTunnel -cli "$cmdfile"
