@@ -3,7 +3,7 @@
 i2p network simulator
 
 
-## dependancies
+## dependencies
 
 * boost 1.60
 * libssl
